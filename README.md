@@ -30,9 +30,9 @@ Elog 是一个简单的示例项目，旨在演示基本的网页开发结构和
 
    使用以下命令将仓库克隆到本地：
 
-   
+   ```bash
    git clone https://github.com/edwin986/Elog.git
-   
+   ```
 
 2. **打开文件：**
 
