@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>渺渺·Misty Weave — Generative Art</title>
+  <style>
+    html, body { margin:0; padding:0; background:#0b0b0c; height:100%; }
+    canvas { display:block; }
+    .hint {
+      position:fixed; left:12px; bottom:12px; color:#dcdcdc; font:12px/1.5 system-ui, -apple-system, Segoe UI, Roboto, PingFang SC, Noto Sans SC, sans-serif;
+      background:rgba(0,0,0,.35); padding:8px 10px; border-radius:8px; backdrop-filter: blur(8px);
+      user-select:none; white-space:pre-line;
+    }
+    .sig {
+      position:fixed; right:16px; bottom:14px; color:#e8e2d0; font:13px/1.2 "SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+      letter-spacing: .5px; opacity:.8; user-select:none;
+      text-shadow: 0 1px 0 rgba(0,0,0,.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="hint" id="hud"></div>
+  <div class="sig">渺渺 · Misty Weave — Edwin × Copilot</div>
+  <script src="https://unpkg.com/p5@1.9.4/lib/p5.min.js"></script>
+  <script>
+    // ====== Global Config ======
+    let seed = 1;
+    let gParticles, gWaves, gDots, gPaper;
+    let W, H, DPR;
+    let showHUD = true;
+
+    let layerEnabled = { particles: true, waves: true, dots: true };
+
+    // Palette: 靛蓝、绛红、金、月白、墨
+    let palette = [];
+
+    // Flow field parameters
+    const flow = {
+      scale: 0.0018,
+      zSpeed: 0.00015,
+      strength: 1.4,
+      decay: 0.06,
+      count: 2200,
+      size: 1.2
+    };
+
+    // Waves parameters
+    const waves = {
+      rows: 8,
+      amp: 38,
+      noise: 0.003,
+      speed: 0.12,
+      thickness: 1.4
+    };
+
+    // Dots parameters
+    const dots = {
+      count: 180,
+      minR: 1.5,
+      maxR: 4.8,
+      breatheA: 0.55,
+      breatheT: 6.0
+    };
+
+    let particles = [];
+    let dotField = [];
+    let zOff = 0;
+
+    function setup() {
+      DPR = window.devicePixelRatio || 1;
+      createCanvas(windowWidth, windowHeight);
+      pixelDensity(DPR);
+      noStroke();
+      smooth();
+      initAll(true);
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight, true);
+      initAll(false);
+    }
+
+    function initAll(regenSeed) {
+      W = width; H = height;
+      if (regenSeed) seed = fxrandSeed();
+      randomSeed(seed); noiseSeed(seed);
+
+      palette = makePalette();
+      // Create layers
+      gParticles = createGraphics(W, H); gParticles.pixelDensity(DPR); gParticles.clear(); gParticles.strokeCap(ROUND);
+      gWaves     = createGraphics(W, H); gWaves.pixelDensity(DPR);     gWaves.clear();
+      gDots      = createGraphics(W, H); gDots.pixelDensity(DPR);      gDots.clear();
+      gPaper     = createGraphics(W, H); gPaper.pixelDensity(DPR);     gPaper.clear();
+
+      // Background paper texture
+      drawPaper(gPaper);
+
+      // Particles
+      particles = [];
+      for (let i = 0; i < flow.count; i++) {
+        particles.push(new Particle(
+          random(W), random(H),
+          lerpColor(color(palette.ink), color(palette.glow), random(0.15, 0.55))
+        ));
+      }
+
+      // Dots
+      dotField = generateDots(dots.count);
+
+      // HUD
+      updateHUD();
+    }
+
+    // ====== Utility ======
+    function fxrandSeed() {
+      // Good range for p5 noise/random
+      return Math.floor(Math.random() * 1e9);
+    }
+
+    function makePalette() {
+      // 调和方案：墨(背景)、靛(主色)、金(点睛)、绛(波纹)、月白(高光)
+      return {
+        ink:  '#0c0d10',
+        deep: '#1b2741',
+        verm: '#a92f41',
+        gold: '#c9a227',
+        haze: '#dbe1e8',
+        glow: '#8398bd'
+      };
+    }
+
+    function drawPaper(pg) {
+      pg.push();
+      // Vertical subtle gradient
+      for (let y = 0; y < H; y++) {
+        const t = y / (H - 1);
+        const c = lerpColor(color('#0a0b0d'), color('#121319'), t);
+        pg.stroke(c);
+        pg.line(0, y, W, y);
+      }
+      // Add gentle fiber noise
+      pg.loadPixels();
+      for (let i = 0; i < pg.pixels.length; i += 4) {
+        const n = (Math.random() - 0.5) * 8; // ±8 grain
+        pg.pixels[i  ] = constrain(pg.pixels[i]   + n, 0, 255);
+        pg.pixels[i+1] = constrain(pg.pixels[i+1] + n, 0, 255);
+        pg.pixels[i+2] = constrain(pg.pixels[i+2] + n, 0, 255);
+      }
+      pg.updatePixels();
+      pg.pop();
+    }
+
+    // ====== Particle System (Flow Field) ======
+    class Particle {
+      constructor(x, y, col) {
+        this.x = x; this.y = y;
+        this.vx = 0; this.vy = 0;
+        this.col = col;
+        this.life = random(220, 600);
+        this.age = 0;
+      }
+      step() {
+        // Flow field vector
+        const nx = this.x * flow.scale;
+        const ny = this.y * flow.scale;
+        const ang = noise(nx, ny, zOff) * TAU * 2.0;
+        const fx = Math.cos(ang) * flow.strength;
+        const fy = Math.sin(ang) * flow.strength;
+
+        // Integrate
+        this.vx = this.vx * (1.0 - flow.decay) + fx * 0.25;
+        this.vy = this.vy * (1.0 - flow.decay) + fy * 0.25;
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Wrap around edges softly
+        if (this.x < -5) this.x = W + 5;
+        if (this.x > W + 5) this.x = -5;
+        if (this.y < -5) this.y = H + 5;
+        if (this.y > H + 5) this.y = -5;
+
+        this.age++;
+        if (this.age > this.life) this.respawn();
+      }
+      draw(pg) {
+        pg.stroke(this.col);
+        pg.strokeWeight(flow.size);
+        // subtle alpha by speed
+        const sp = Math.hypot(this.vx, this.vy);
+        pg.stroke(red(this.col), green(this.col), blue(this.col), map(sp, 0, 2.5, 12, 40, true));
+        pg.point(this.x, this.y);
+      }
+      respawn() {
+        this.x = random(W); this.y = random(H);
+        this.vx = 0; this.vy = 0;
+        this.age = 0; this.life = random(220, 600);
+      }
+    }
+
+    // ====== Dots (quasi Poisson) ======
+    function generateDots(n) {
+      const pts = [];
+      const minD = 12;
+      let tries = 0, maxTries = n * 30;
+      while (pts.length < n && tries < maxTries) {
+        const p = createVector(random(W), random(H));
+        let ok = true;
+        for (let i = 0; i < pts.length; i++) {
+          if (p.dist(pts[i]) < minD) { ok = false; break; }
+        }
+        if (ok) pts.push(p);
+        tries++;
+      }
+      const arr = pts.slice(0, n).map(p => {
+        return {
+          x: p.x, y: p.y,
+          r: random(dots.minR, dots.maxR),
+          base: random(0.4, 0.85),
+          hue: random([palette.gold, palette.haze, palette.glow])
+        };
+      });
+      return arr;
+    }
+
+    // ====== Waves ======
+    function drawWaves(pg, t) {
+      pg.clear();
+      pg.push();
+      pg.noFill();
+      for (let r = 0; r < waves.rows; r++) {
+        const yBase = map(r, 0, waves.rows-1, H*0.25, H*0.85);
+        const col = lerpColor(color(palette.deep), color(palette.verm), r/(waves.rows-1));
+        pg.stroke(red(col), green(col), blue(col), 110);
+        pg.strokeWeight(waves.thickness);
+        pg.beginShape();
+        for (let x = 0; x <= W; x += 4) {
+          const n = noise(x*waves.noise, r*0.25 + t*0.2);
+          const y = yBase + sin((x*0.012) + r*0.6 + t*waves.speed) * (waves.amp*0.6 + r*1.2)
+                    + (n-0.5)*waves.amp*1.2;
+          pg.vertex(x, y);
+        }
+        pg.endShape();
+      }
+      pg.pop();
+      // slight blur to soften
+      pg.filter(BLUR, 1);
+    }
+
+    function drawDots(pg, t) {
+      pg.clear();
+      pg.push();
+      pg.noStroke();
+      for (const d of dotField) {
+        const breathe = d.base + Math.sin(t / dots.breatheT + (d.x+d.y)*0.0008) * dots.breatheA * 0.3;
+        const r = d.r * breathe;
+        const c = color(d.hue);
+        pg.fill(red(c), green(c), blue(c), 130);
+        pg.circle(d.x, d.y, r*2);
+      }
+      pg.pop();
+      // slight glow by additive self overdraw
+      pg.push();
+      pg.blendMode(ADD);
+      pg.tint(255, 80);
+      pg.image(pg, 0, 0);
+      pg.pop();
+    }
+
+    // ====== Main Draw ======
+    function draw() {
+      const t = millis() / 1000;
+
+      // Base background: paper + subtle vignette
+      image(gPaper, 0, 0);
+      drawVignette();
+
+      // Update flow field
+      zOff += flow.zSpeed;
+
+      // Particles layer: fade slowly for trails
+      if (layerEnabled.particles) {
+        gParticles.push();
+        gParticles.noStroke();
+        gParticles.fill(0, 0, 0, 10); // fade
+        gParticles.rect(0, 0, W, H);
+        gParticles.pop();
+
+        for (let i = 0; i < particles.length; i++) {
+          particles[i].step();
+          particles[i].draw(gParticles);
+        }
+      }
+
+      // Waves layer
+      if (layerEnabled.waves) drawWaves(gWaves, t);
+
+      // Dots layer
+      if (layerEnabled.dots) drawDots(gDots, t);
+
+      // Composite
+      push();
+      // particles: screen blend
+      blendMode(SCREEN);
+      tint(255, 220);
+      image(gParticles, 0, 0);
+
+      // waves: normal over
+      blendMode(BLEND);
+      tint(255, 190);
+      image(gWaves, 0, 0);
+
+      // dots: add for glow
+      blendMode(ADD);
+      tint(255, 180);
+      image(gDots, 0, 0);
+      pop();
+
+      // Foreground grain
+      drawGrain(10);
+
+      // HUD (optional)
+      if (showHUD) drawOnCanvasHUD();
+    }
+
+    function drawVignette() {
+      push();
+      noStroke();
+      for (let i = 0; i < 6; i++) {
+        const a = [0, 10, 18, 28, 38, 48][i];
+        fill(0, 0, 0, a);
+        rect(-i*2, -i*2, W+i*4, H+i*4);
+      }
+      pop();
+    }
+
+    function drawGrain(amount=8) {
+      loadPixels();
+      for (let i = 0; i < pixels.length; i += 4) {
+        const n = (Math.random() - 0.5) * amount;
+        pixels[i  ] = constrain(pixels[i]   + n, 0, 255);
+        pixels[i+1] = constrain(pixels[i+1] + n, 0, 255);
+        pixels[i+2] = constrain(pixels[i+2] + n, 0, 255);
+      }
+      updatePixels();
+    }
+
+    function drawOnCanvasHUD() {
+      const hud = document.getElementById('hud');
+      hud.textContent =
+`渺渺 · Misty Weave
+seed: ${seed}
+toggle: [1] 粒子  ${layerEnabled.particles ? 'ON' : 'OFF'}  |  [2] 波纹  ${layerEnabled.waves ? 'ON' : 'OFF'}  |  [3] 光点  ${layerEnabled.dots ? 'ON' : 'OFF'}
+R 重新播种   S 保存PNG   H 隐藏HUD
+点击/触摸画面：扰动气流`;
+    }
+
+    // ====== Interaction ======
+    function keyPressed() {
+      if (key === 'R' || key === 'r') initAll(true);
+      else if (key === 'S' || key === 's') saveCanvas('MistyWeave_'+seed, 'png');
+      else if (key === 'H' || key === 'h') { showHUD = !showHUD; document.getElementById('hud').style.display = showHUD ? 'block' : 'none'; }
+      else if (key === '1') { layerEnabled.particles = !layerEnabled.particles; updateHUD(); }
+      else if (key === '2') { layerEnabled.waves = !layerEnabled.waves; updateHUD(); }
+      else if (key === '3') { layerEnabled.dots = !layerEnabled.dots; updateHUD(); }
+    }
+
+    function mouseDragged() { disturb(mouseX, mouseY); }
+    function touchMoved() { disturb(mouseX, mouseY); return false; }
+
+    function disturb(x, y) {
+      // 给附近粒子一点冲量
+      for (let i = 0; i < 50; i++) {
+        const p = random(particles);
+        const dx = p.x - x, dy = p.y - y;
+        const d = Math.hypot(dx, dy) + 0.001;
+        if (d < 140) {
+          const f = (140 - d) * 0.02;
+          p.vx += (dx / d) * f;
+          p.vy += (dy / d) * f;
+        }
+      }
+    }
+
+    function updateHUD() { if (showHUD) drawOnCanvasHUD(); }
+  </script>
+</body>
+</html>
