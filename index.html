@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>多点触碰粒子光海</title>
+<title>移动端粒子光海优化版</title>
 <style>
   body { margin:0; overflow:hidden; background:#000; }
   canvas { display:block; }
@@ -18,41 +18,38 @@ canvas.height = window.innerHeight;
 
 // 粒子类
 class Particle {
-    constructor(x, y) {
+    constructor(x, y){
         this.x = x;
         this.y = y;
         this.vx = (Math.random()-0.5)*1;
         this.vy = (Math.random()-0.5)*1;
-        this.size = Math.random()*3+1;
+        this.size = Math.random()*2+1;
         this.hue = Math.random()*360;
         this.trail = [];
     }
 
-    update() {
-        // 尾迹
+    update(){
         this.trail.push({x:this.x, y:this.y});
-        if(this.trail.length>12) this.trail.shift();
+        if(this.trail.length>6) this.trail.shift(); // 尾迹长度6
 
         this.x += this.vx;
         this.y += this.vy;
 
-        // 边界反弹
         if(this.x<0||this.x>canvas.width) this.vx*=-1;
         if(this.y<0||this.y>canvas.height) this.vy*=-1;
 
-        // 颜色渐变
         this.hue += 0.3;
         if(this.hue>360) this.hue-=360;
     }
 
-    draw() {
-        // 尾迹光晕
+    draw(){
+        // 尾迹
         for(let i=0;i<this.trail.length;i++){
             const point = this.trail[i];
             ctx.beginPath();
             ctx.fillStyle = `hsla(${this.hue},100%,70%,${i/this.trail.length})`;
             ctx.shadowColor = `hsla(${this.hue},100%,70%,${i/this.trail.length})`;
-            ctx.shadowBlur = 15;
+            ctx.shadowBlur = 8; // 阴影减少
             ctx.arc(point.x, point.y, this.size, 0, Math.PI*2);
             ctx.fill();
         }
@@ -60,7 +57,7 @@ class Particle {
         ctx.beginPath();
         ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
         ctx.shadowColor = `hsl(${this.hue},100%,70%)`;
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 10;
         ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
         ctx.fill();
     }
@@ -68,69 +65,68 @@ class Particle {
 
 // 粒子群
 const particles = [];
-const particleCount = 300;
+const particleCount = 100; // 移动端优化数量
 for(let i=0;i<particleCount;i++){
     particles.push(new Particle(Math.random()*canvas.width, Math.random()*canvas.height));
 }
 
 // 多点扰动
 let disturbances = [];
-
-// 鼠标触碰
 canvas.addEventListener('mousemove', e=>{
-    disturbances.push({x:e.clientX, y:e.clientY, life:5});
+    disturbances.push({x:e.clientX, y:e.clientY, life:3});
 });
-
-// 多点触控
 canvas.addEventListener('touchstart', e=>{
     e.preventDefault();
     for(let i=0;i<e.touches.length;i++){
-        disturbances.push({x:e.touches[i].clientX, y:e.touches[i].clientY, life:5});
+        disturbances.push({x:e.touches[i].clientX, y:e.touches[i].clientY, life:3});
     }
 },{passive:false});
 canvas.addEventListener('touchmove', e=>{
     e.preventDefault();
     for(let i=0;i<e.touches.length;i++){
-        disturbances.push({x:e.touches[i].clientX, y:e.touches[i].clientY, life:5});
+        disturbances.push({x:e.touches[i].clientX, y:e.touches[i].clientY, life:3});
     }
 },{passive:false});
 
-// 光束尾迹
-const trails = [];
-
+// 动画循环
 function animate(){
     ctx.fillStyle='black';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // 粒子连线
+    // 粒子连线优化：每个粒子只连最近3个粒子
     for(let i=0;i<particles.length;i++){
-        for(let j=i+1;j<particles.length;j++){
-            let dx = particles[i].x - particles[j].x;
-            let dy = particles[i].y - particles[j].y;
-            let dist = Math.sqrt(dx*dx+dy*dy);
-            if(dist<100){
-                ctx.strokeStyle=`hsla(${particles[i].hue},100%,70%,${1-dist/100})`;
-                ctx.lineWidth=1;
+        let neighbors = [];
+        for(let j=0;j<particles.length;j++){
+            if(i!==j){
+                let dx = particles[i].x-particles[j].x;
+                let dy = particles[i].y-particles[j].y;
+                let dist = Math.sqrt(dx*dx+dy*dy);
+                neighbors.push({dist, particle:particles[j]});
+            }
+        }
+        neighbors.sort((a,b)=>a.dist-b.dist);
+        for(let k=0;k<3;k++){
+            if(neighbors[k].dist<100){
+                ctx.strokeStyle = `hsla(${particles[i].hue},100%,70%,${1-neighbors[k].dist/100})`;
+                ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(particles[i].x,particles[i].y);
-                ctx.lineTo(particles[j].x,particles[j].y);
+                ctx.moveTo(particles[i].x, particles[i].y);
+                ctx.lineTo(neighbors[k].particle.x, neighbors[k].particle.y);
                 ctx.stroke();
             }
         }
     }
 
-    // 更新扰动点
+    // 扰动光束
     disturbances.forEach((d,index)=>{
-        // 光束渐变效果
         ctx.beginPath();
-        const grad = ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,20);
-        grad.addColorStop(0, `rgba(255,255,255,${d.life/5})`);
+        const grad = ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,15);
+        grad.addColorStop(0, `rgba(255,255,255,${d.life/3})`);
         grad.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = grad;
-        ctx.arc(d.x,d.y,20,0,Math.PI*2);
+        ctx.arc(d.x,d.y,15,0,Math.PI*2);
         ctx.fill();
 
-        // 寿命衰减
         d.life -= 0.1;
         if(d.life<=0) disturbances.splice(index,1);
     });
