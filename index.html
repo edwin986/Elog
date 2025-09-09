@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>移动端粒子光海优化版</title>
+<title>移动端三维光海粒子动画（无触摸痕迹）</title>
 <style>
   body { margin:0; overflow:hidden; background:#000; }
   canvas { display:block; }
@@ -18,19 +18,20 @@ canvas.height = window.innerHeight;
 
 // 粒子类
 class Particle {
-    constructor(x, y){
+    constructor(x, y, z){
         this.x = x;
         this.y = y;
-        this.vx = (Math.random()-0.5)*1;
-        this.vy = (Math.random()-0.5)*1;
-        this.size = Math.random()*2+1;
+        this.z = z; // 深度0~1
+        this.vx = (Math.random()-0.5)*(1+z*1);
+        this.vy = (Math.random()-0.5)*(1+z*1);
+        this.size = (Math.random()*2+1)*(0.5+z);
         this.hue = Math.random()*360;
         this.trail = [];
     }
 
     update(){
-        this.trail.push({x:this.x, y:this.y});
-        if(this.trail.length>6) this.trail.shift(); // 尾迹长度6
+        this.trail.push({x:this.x, y:this.y, z:this.z});
+        if(this.trail.length>Math.ceil(6*(0.5+this.z))) this.trail.shift();
 
         this.x += this.vx;
         this.y += this.vy;
@@ -43,34 +44,35 @@ class Particle {
     }
 
     draw(){
-        // 尾迹
         for(let i=0;i<this.trail.length;i++){
             const point = this.trail[i];
+            const alpha = (i/this.trail.length)*(0.5+point.z*0.5);
             ctx.beginPath();
-            ctx.fillStyle = `hsla(${this.hue},100%,70%,${i/this.trail.length})`;
-            ctx.shadowColor = `hsla(${this.hue},100%,70%,${i/this.trail.length})`;
-            ctx.shadowBlur = 8; // 阴影减少
-            ctx.arc(point.x, point.y, this.size, 0, Math.PI*2);
+            ctx.fillStyle = `hsla(${this.hue},100%,70%,${alpha})`;
+            ctx.shadowColor = `hsla(${this.hue},100%,70%,${alpha})`;
+            ctx.shadowBlur = 8*(0.5+point.z);
+            ctx.arc(point.x, point.y, this.size*(0.5+point.z), 0, Math.PI*2);
             ctx.fill();
         }
-        // 当前粒子
+        const alpha = 0.7+0.3*this.z;
         ctx.beginPath();
-        ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
-        ctx.shadowColor = `hsl(${this.hue},100%,70%)`;
-        ctx.shadowBlur = 10;
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fillStyle = `hsla(${this.hue},100%,70%,${alpha})`;
+        ctx.shadowColor = `hsla(${this.hue},100%,70%,${alpha})`;
+        ctx.shadowBlur = 10*(0.5+this.z);
+        ctx.arc(this.x, this.y, this.size*(0.5+this.z), 0, Math.PI*2);
         ctx.fill();
     }
 }
 
-// 粒子群
-const particles = [];
-const particleCount = 100; // 移动端优化数量
+// 初始化粒子
+let particles = [];
+let particleCount = 100;
+const maxParticles = 150;
 for(let i=0;i<particleCount;i++){
-    particles.push(new Particle(Math.random()*canvas.width, Math.random()*canvas.height));
+    particles.push(new Particle(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()));
 }
 
-// 多点扰动
+// 多点扰动（不显示痕迹，只影响粒子）
 let disturbances = [];
 canvas.addEventListener('mousemove', e=>{
     disturbances.push({x:e.clientX, y:e.clientY, life:3});
@@ -88,12 +90,27 @@ canvas.addEventListener('touchmove', e=>{
     }
 },{passive:false});
 
-// 动画循环
+// 帧率监控
+let lastTime = performance.now();
+let fps = 60;
+const targetFPS = 50;
+
 function animate(){
+    const now = performance.now();
+    fps = 1000/(now-lastTime);
+    lastTime = now;
+
+    // 自适应粒子数量
+    if(fps < targetFPS && particles.length>50){
+        particles.pop();
+    } else if(fps > targetFPS+10 && particles.length<maxParticles){
+        particles.push(new Particle(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()));
+    }
+
     ctx.fillStyle='black';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // 粒子连线优化：每个粒子只连最近3个粒子
+    // 粒子连线（每粒子连最近3个）
     for(let i=0;i<particles.length;i++){
         let neighbors = [];
         for(let j=0;j<particles.length;j++){
@@ -107,7 +124,8 @@ function animate(){
         neighbors.sort((a,b)=>a.dist-b.dist);
         for(let k=0;k<3;k++){
             if(neighbors[k].dist<100){
-                ctx.strokeStyle = `hsla(${particles[i].hue},100%,70%,${1-neighbors[k].dist/100})`;
+                const avgZ = (particles[i].z+neighbors[k].particle.z)/2;
+                ctx.strokeStyle = `hsla(${particles[i].hue},100%,70%,${(1-neighbors[k].dist/100)*(0.3+avgZ*0.7)})`;
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(particles[i].x, particles[i].y);
@@ -117,16 +135,8 @@ function animate(){
         }
     }
 
-    // 扰动光束
+    // 扰动寿命管理（不显示光束）
     disturbances.forEach((d,index)=>{
-        ctx.beginPath();
-        const grad = ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,15);
-        grad.addColorStop(0, `rgba(255,255,255,${d.life/3})`);
-        grad.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = grad;
-        ctx.arc(d.x,d.y,15,0,Math.PI*2);
-        ctx.fill();
-
         d.life -= 0.1;
         if(d.life<=0) disturbances.splice(index,1);
     });
