@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>粒子光点触碰动画</title>
+<title>多点触碰粒子光海</title>
 <style>
   body { margin:0; overflow:hidden; background:#000; }
   canvas { display:block; }
@@ -29,11 +29,10 @@ class Particle {
     }
 
     update() {
-        // 保存尾迹
+        // 尾迹
         this.trail.push({x:this.x, y:this.y});
-        if(this.trail.length>10) this.trail.shift();
+        if(this.trail.length>12) this.trail.shift();
 
-        // 更新位置
         this.x += this.vx;
         this.y += this.vy;
 
@@ -47,7 +46,7 @@ class Particle {
     }
 
     draw() {
-        // 尾迹
+        // 尾迹光晕
         for(let i=0;i<this.trail.length;i++){
             const point = this.trail[i];
             ctx.beginPath();
@@ -67,36 +66,39 @@ class Particle {
     }
 }
 
+// 粒子群
 const particles = [];
-const particleCount = 250;
+const particleCount = 300;
 for(let i=0;i<particleCount;i++){
     particles.push(new Particle(Math.random()*canvas.width, Math.random()*canvas.height));
 }
 
-// 鼠标/触碰事件
+// 多点扰动
 let disturbances = [];
-canvas.addEventListener('mousemove', e => {
+
+// 鼠标触碰
+canvas.addEventListener('mousemove', e=>{
     disturbances.push({x:e.clientX, y:e.clientY, life:5});
 });
-canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    for(let i=0;i<e.touches.length;i++){
-        disturbances.push({x:e.touches[i].clientX, y:e.touches[i].clientY, life:5});
-    }
-}, { passive:false });
 
-canvas.addEventListener('touchmove', e => {
+// 多点触控
+canvas.addEventListener('touchstart', e=>{
     e.preventDefault();
     for(let i=0;i<e.touches.length;i++){
         disturbances.push({x:e.touches[i].clientX, y:e.touches[i].clientY, life:5});
     }
-}, { passive:false });
+},{passive:false});
+canvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    for(let i=0;i<e.touches.length;i++){
+        disturbances.push({x:e.touches[i].clientX, y:e.touches[i].clientY, life:5});
+    }
+},{passive:false});
 
 // 光束尾迹
 const trails = [];
 
-function animate() {
-    // 纯黑背景
+function animate(){
     ctx.fillStyle='black';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
@@ -130,7 +132,7 @@ function animate() {
 
         // 寿命衰减
         d.life -= 0.1;
-        if(d.life <= 0) disturbances.splice(index,1);
+        if(d.life<=0) disturbances.splice(index,1);
     });
 
     // 粒子更新
@@ -160,9 +162,9 @@ function animate() {
 
 animate();
 
-window.addEventListener('resize',()=>{
-    canvas.width=window.innerWidth;
-    canvas.height=window.innerHeight;
+window.addEventListener('resize', ()=>{
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 });
 </script>
 </body>
