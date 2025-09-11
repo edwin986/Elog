@@ -1,6 +1,64 @@
 # 命令中文注释表
 
 > 本文档整理了常用命令及工具的中文注释，按字母顺序排列。
+
+<input type="text" id="searchBox" placeholder="输入命令或关键字搜索..." style="margin-bottom:10px;width:300px;padding:5px;" onkeyup="searchTable()">
+
+<table id="commandTable" border="1" style="border-collapse:collapse;width:100%">
+<thead>
+<tr>
+  <th>命令</th>
+  <th>中文注释</th>
+  <th>示例用法</th>
+  <th>参数/说明</th>
+  <th>平台/备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ls</td>
+  <td>列出目录内容</td>
+  <td>ls -la</td>
+  <td>-l：详细信息，-a：显示隐藏文件</td>
+  <td>跨平台</td>
+</tr>
+<tr>
+  <td>cd</td>
+  <td>切换当前目录</td>
+  <td>cd /home/user</td>
+  <td>N/A</td>
+  <td>跨平台</td>
+</tr>
+<tr>
+  <td>cp</td>
+  <td>复制文件或目录</td>
+  <td>cp file1.txt file2.txt</td>
+  <td>-r：递归复制目录</td>
+  <td>跨平台</td>
+</tr>
+<!-- 这里可以添加更多命令行 -->
+</tbody>
+</table>
+
+<script>
+function searchTable() {
+    let input = document.getElementById("searchBox").value.toLowerCase();
+    let table = document.getElementById("commandTable");
+    let trs = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < trs.length; i++) { // 跳过表头
+        let tds = trs[i].getElementsByTagName("td");
+        let found = false;
+        for (let j = 0; j < tds.length; j++) {
+            if (tds[j].innerText.toLowerCase().includes(input)) {
+                found = true;
+                break;
+            }
+        }
+        trs[i].style.display = found ? "" : "none";
+    }
+}
+</script>
 ---
 ## A–C 部分（到 cp）
 
