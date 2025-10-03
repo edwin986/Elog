@@ -2,64 +2,62 @@
 
 以下是 bash 5.x 的官方内建命令（不同版本可能略有差异）：
 
-| 命令                | 中文注释                              |
-|---------------------|---------------------------------------|
-| :                   | 空命令（什么都不做，返回状态 0）      |
-| .                   | 在当前 shell 中执行脚本（不新建子进程）|
-| alias               | 创建命令别名                          |
-| bg                  | 将作业放到后台继续运行                |
-| bind                | 设置键盘绑定                          |
-| break               | 跳出循环                              |
-| builtin             | 运行 shell 内建命令（绕过同名外部命令）|
-| cd                  | 切换目录                              |
-| command             | 执行命令，忽略函数/别名                |
-| compgen             | 生成可能的命令补全结果                |
-| complete            | 指定补全规则                          |
-| continue            | 跳过本次循环，进入下一轮              |
-| declare / typeset   | 声明变量/函数属性                    |
-| dirs                | 显示目录堆栈                          |
-| disown              | 从作业列表中移除，不受 SIGHUP 影响    |
-| echo                | 输出字符串                            |
-| enable              | 启用/禁用内建命令                    |
-| eval                | 将参数作为命令执行                    |
-| exec                | 使用指定命令替换当前 shell 进程        |
-| exit                | 退出当前 shell                        |
-| export              | 设置环境变量                          |
-| false               | 返回状态 1（假）                      |
-| fc                  | 命令历史编辑与执行                    |
-| fg                  | 将后台作业调到前台                    |
-| getopts             | 解析脚本的命令行参数                  |
-| hash                | 缓存命令路径，加速查找                |
-| help                | 显示内建命令帮助                      |
-| history             | 查看历史命令                          |
-| jobs                | 查看作业列表                          |
-| kill                | 向进程发送信号                        |
-| let                 | 执行算术运算                          |
-| local               | 定义局部变量（函数内部用）            |
-| logout              | 退出登录 shell                        |
-| mapfile / readarray | 将输入读入数组                        |
-| popd                | 弹出目录堆栈                          |
-| pushd               | 压入目录堆栈                          |
-| printf              | 格式化输出                            |
-| pwd                 | 打印当前目录                          |
-| read                | 从标准输入读取变量                    |
-| readonly            | 声明只读变量                          |
-| return              | 从函数返回值                          |
-| set                 | 设置 shell 选项/变量                  |
-| shift               | 左移参数列表（丢弃 $1）              |
-| shopt               | 设置 shell 选项（比 set 更细）        |
-| source              | 在当前 shell 执行脚本（等价于 .）      |
-| suspend             | 挂起当前 shell                        |
-| test / [            | 条件判断命令                          |
-| times               | 打印累计 CPU 时间                    |
-| trap                | 定义信号捕捉行为                      |
-| true                | 返回状态 0（真）                      |
-| type                | 显示命令的类型（内建、别名、函数、外部命令）|
-| ulimit              | 设置资源限制                          |
-| umask               | 设置默认权限掩码                      |
-| unalias             | 删除别名                              |
-| unset               | 删除变量或函数                        |
-| wait                | 等待进程完成                          |
+- : - 空命令（什么都不做，返回状态 0）
+- . - 在当前 shell 中执行脚本（不新建子进程）
+- alias - 创建命令别名
+- bg - 将作业放到后台继续运行
+- bind - 设置键盘绑定
+- break - 跳出循环
+- builtin - 运行 shell 内建命令（绕过同名外部命令）
+- cd - 切换目录
+- command - 执行命令，忽略函数/别名
+- compgen - 生成可能的命令补全结果
+- complete - 指定补全规则
+- continue - 跳过本次循环，进入下一轮
+- declare / typeset - 声明变量/函数属性
+- dirs - 显示目录堆栈
+- disown - 从作业列表中移除，不受 SIGHUP 影响
+- echo - 输出字符串
+- enable - 启用/禁用内建命令
+- eval - 将参数作为命令执行
+- exec - 使用指定命令替换当前 shell 进程
+- exit - 退出当前 shell
+- export - 设置环境变量
+- false - 返回状态 1（假）
+- fc - 命令历史编辑与执行
+- fg - 将后台作业调到前台
+- getopts - 解析脚本的命令行参数
+- hash - 缓存命令路径，加速查找
+- help - 显示内建命令帮助
+- history - 查看历史命令
+- jobs - 查看作业列表
+- kill - 向进程发送信号
+- let - 执行算术运算
+- local - 定义局部变量（函数内部用）
+- logout - 退出登录 shell
+- mapfile / readarray - 将输入读入数组
+- popd - 弹出目录堆栈
+- pushd - 压入目录堆栈
+- printf - 格式化输出
+- pwd - 打印当前目录
+- read - 从标准输入读取变量
+- readonly - 声明只读变量
+- return - 从函数返回值
+- set - 设置 shell 选项/变量
+- shift - 左移参数列表（丢弃 $1）
+- shopt - 设置 shell 选项（比 set 更细）
+- source - 在当前 shell 执行脚本（等价于 .）
+- suspend - 挂起当前 shell
+- test / [ - 条件判断命令
+- times - 打印累计 CPU 时间
+- trap - 定义信号捕捉行为
+- true - 返回状态 0（真）
+- type - 显示命令的类型（内建、别名、函数、外部命令）
+- ulimit - 设置资源限制
+- umask - 设置默认权限掩码
+- unalias - 删除别名
+- unset - 删除变量或函数
+- wait - 等待进程完成
 
 ---
 
@@ -67,50 +65,48 @@
 
 这是你在 Linux 系统里常见的基础命令，不是 Bash 内建，但几乎每天都会用到：
 
-| 命令                | 中文注释                              |
-|---------------------|---------------------------------------|
-| ls                  | 列出目录内容                          |
-| cat                 | 连接文件并输出内容                    |
-| cp                  | 复制文件或目录                        |
-| mv                  | 移动或重命名                          |
-| rm                  | 删除文件或目录                        |
-| mkdir               | 创建目录                              |
-| rmdir               | 删除空目录                            |
-| touch               | 创建空文件或修改时间戳                |
-| man                 | 查看命令手册                          |
-| which               | 查找命令路径                          |
-| find                | 搜索文件                              |
-| grep                | 文本搜索                              |
-| head                | 显示文件开头                          |
-| tail                | 显示文件结尾                          |
-| less                | 分页查看文件                          |
-| wc                  | 统计字数、行数、字符数                |
-| sort                | 排序                                  |
-| uniq                | 去重                                  |
-| cut                 | 按列切分文本                          |
-| awk                 | 强大的文本处理工具                    |
-| sed                 | 流编辑器                              |
-| tar                 | 打包/解包                              |
-| gzip / gunzip       | 压缩/解压缩                            |
-| ssh                 | 远程登录                              |
-| scp                 | 远程复制                              |
-| ping                | 网络连通性测试                        |
-| curl                | 网络请求工具                          |
-| wget                | 下载文件                              |
-| ps                  | 查看进程                              |
-| top / htop          | 查看进程动态信息                      |
-| df                  | 查看磁盘使用情况                      |
-| du                  | 查看目录大小                          |
-| free                | 查看内存                              |
-| uname               | 查看系统信息                          |
-| date                | 显示/设置日期                          |
-| cal                 | 显示日历                              |
-| who                 | 显示登录用户                          |
-| id                  | 显示用户 UID/GID                      |
-| chmod               | 修改权限                              |
-| chown               | 修改所有者                            |
-| su                  | 切换用户                              |
-| sudo                | 以管理员权限执行                      |
-| env                 | 查看环境变量                          |
-| echo $VAR           | 打印变量值                            |
-| exit                | 退出终端                              |
+- ls - 列出目录内容
+- cat - 连接文件并输出内容
+- cp - 复制文件或目录
+- mv - 移动或重命名
+- rm - 删除文件或目录
+- mkdir - 创建目录
+- rmdir - 删除空目录
+- touch - 创建空文件或修改时间戳
+- man - 查看命令手册
+- which - 查找命令路径
+- find - 搜索文件
+- grep - 文本搜索
+- head - 显示文件开头
+- tail - 显示文件结尾
+- less - 分页查看文件
+- wc - 统计字数、行数、字符数
+- sort - 排序
+- uniq - 去重
+- cut - 按列切分文本
+- awk - 强大的文本处理工具
+- sed - 流编辑器
+- tar - 打包/解包
+- gzip / gunzip - 压缩/解压缩
+- ssh - 远程登录
+- scp - 远程复制
+- ping - 网络连通性测试
+- curl - 网络请求工具
+- wget - 下载文件
+- ps - 查看进程
+- top / htop - 查看进程动态信息
+- df - 查看磁盘使用情况
+- du - 查看目录大小
+- free - 查看内存
+- uname - 查看系统信息
+- date - 显示/设置日期
+- cal - 显示日历
+- who - 显示登录用户
+- id - 显示用户 UID/GID
+- chmod - 修改权限
+- chown - 修改所有者
+- su - 切换用户
+- sudo - 以管理员权限执行
+- env - 查看环境变量
+- echo $VAR - 打印变量值
+- exit - 退出终端
